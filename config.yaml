@@ -1,0 +1,21 @@
+## config.yaml
+model:
+  input_dim: 38  # Default for SMD, adjust per dataset
+  hidden_dim: 100
+  latent_dim: 32
+  window_size: 50
+
+training:
+  batch_size: 100
+  learning_rate: 0.001
+  epochs_base: 50
+  epochs_retrain: 10
+  
+lara:
+  n_restored: 10     # n: Number of restored historical samples
+  mc_samples: 10     # N: Number of samples for Monte Carlo estimation
+  retrain_ratio: 0.01 # 1% of target data used for retraining
+
+evaluation:
+  pot_q: 0.01     # Percentile for POT
+  pot_level: 0.95   # Level for extreme value distribution
