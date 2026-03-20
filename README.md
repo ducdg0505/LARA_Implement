@@ -27,38 +27,9 @@ The repository is modularly designed for research and deployment. Below are the 
 ## 4. Hyperparameter Configuration (`config.yaml`)
 Before running the models, you can adjust the system settings and hyperparameters in the `config.yaml` file. 
 
-```yaml
-# System Settings
-system:
-  seed: 42
-  device: "cuda" # or "cpu"
-  data_root: "data/SMD"
+## 5. Hướng dẫn chạy mô hình từng bước (Step-by-Step Execution Guide)
 
-# Base Model Architecture
-model:
-  input_dim: 38      # 38 features for SMD
-  hidden_dim: 100    # GRU hidden state size
-  latent_dim: 16     # VAE bottleneck size
-  dropout: 0.2
-
-# Training Hyperparameters
-training:
-  batch_size: 256
-  lr_base: 0.0006    # Learning rate for base VAE
-  lr_lara: 0.008     # Learning rate for LARA retraining
-  epochs_base: 40    # Epochs to train the base model
-  epochs_retrain: 15 # Epochs for fast convex LARA retraining
-
-# LARA Specific Settings
-lara:
-  n_restored: 16      # Historical samples to restore
-  mc_samples: 10      # Monte Carlo samples
-  retrain_ratio: 0.01 # Use 1% of target data for rapid adaptation
-
-
-5. Hướng dẫn chạy mô hình từng bước (Step-by-Step Execution Guide)
-
-Bước 1: Cài đặt môi trường
+### Bước 1: Cài đặt môi trường
 Đảm bảo bạn đã cài đặt Python 3.8 trở lên. Cài đặt các thư viện cần thiết thông qua terminal hoặc command prompt:
 
 ```bash
