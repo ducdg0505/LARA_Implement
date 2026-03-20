@@ -1,44 +1,101 @@
-# LARA-Enhanced: Robust Time-Series Anomaly Detection (F1 > 0.93)
+# Project Report: Robust Time-Series Anomaly Detection using Enhanced LARA (V25.0)
 
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=flat&logo=PyTorch&logoColor=white)](https://pytorch.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+**Project Objective:** To achieve highly accurate anomaly detection on the Server Machine Dataset (SMD) by overcoming training noise and evaluation metric sensitivities, targeting an Average F1-Score above 0.90.
 
-This repository provides an advanced, highly optimized implementation of the **LARA** (Light and Anti-overfitting Retraining Approach) model for Time-Series Anomaly Detection. 
+## 1. Executive Summary
+This project implements and significantly enhances the **LARA** (Light and Anti-overfitting Retraining Approach) model for Time-Series Anomaly Detection. While the base LARA model utilizes a Variational Autoencoder (VAE) and linear adjustments to adapt to new data distributions, it struggles with noisy training data and extreme anomaly spikes during evaluation. 
 
-Through a series of structural enhancements—namely **Clean Memory Initialization (CMI)**, **MAD-FES (Median Absolute Deviation Feature Error Scaling)**, and **Multi-Scale Ensemble**—this implementation achieves a state-of-the-art **Average F1-Score of 0.9324** (Median F1: 0.9740) on the Server Machine Dataset (SMD).
+By introducing **Version 25 (V25.0)**, this project integrates three major architectural and mathematical improvements, successfully pushing the Average F1-Score to **0.9324** on the complete SMD benchmark.
 
-## 🚀 Key Innovations & Enhancements (V25.0)
+## 2. Key Architectural Innovations (Version 25)
+The `Version25.py` implementation achieves state-of-the-art results through the following techniques:
 
-While the base LARA paper provides a strong theoretical foundation with its linear $M_x$ and $M_z$ adjustment layers, real-world datasets like SMD contain hidden anomalies in the training set and exhibit massive variance across different machines. We solved this with three core techniques:
+* **Clean Memory Initialization (CMI):** In standard LARA, historical memory for the Ruminate Block is sampled randomly. In V25, we evaluate 2,000 historical candidates using the frozen Base VAE and actively filter out the top 10% with the highest reconstruction errors. This guarantees the target latent vector is guided only by strictly "normal" data.
+* **Robust MAD-FES (Median Absolute Deviation - Feature Error Scaling):** Standard scaling methods (Min-Max or Mean/Std) are easily distorted by massive anomaly spikes. V25 replaces these with MAD. Furthermore, we implemented a "Smart Flooring" technique (setting a minimum bound based on the median of all MADs) to prevent gradient explosions on highly stable features.
+* **Multi-Scale Context Ensemble:** Instead of relying on a single window size, the model evaluates time-series data using parallel pipelines at different window scales (e.g., 32 and 96). The normalized, log-scaled anomaly scores are then averaged, capturing both sudden micro-glitches and prolonged contextual drifts.
 
-### 1. Clean Memory Initialization (CMI)
-In the standard Ruminate Block, historical samples are randomly selected. However, if the training set contains anomalies, the target latent vector $\tilde{z}$ becomes corrupted.
-* **How it works:** Before initializing the Ruminate Block's memory, we sample 2,000 candidates from the historical data. We run these through the frozen Base VAE and calculate their reconstruction errors. We then **filter out the top 10% with the highest errors**, ensuring the history memory consists *only* of highly pure, normal samples.
+## 3. Project Structure
+The repository is modularly designed for research and deployment. Below are the core components:
 
-### 2. Robust MAD-FES (Median Absolute Deviation - Feature Error Scaling)
-Standard normalization (Mean/Std or Min/Max) is heavily skewed by extreme anomaly values during evaluation. 
-* **How it works:** We replaced standard scaling with MAD (Median Absolute Deviation). 
-* **Smart Flooring:** To prevent division by zero for highly stable features, we calculate a dynamic `floor = median(all_MADs) * 0.05`. This aggressively isolates true anomalies without exploding the gradients of minor fluctuations.
-* **Dual-Space Scoring:** The final anomaly score is a weighted combination of both Reconstruction Error and Latent Space Shift (`total_err = recon_err + 0.5 * latent_err`).
+* **`Version25.py`:** The primary execution script containing the fully enhanced LARA model (CMI, MAD-FES, Ensemble). This is the file that achieves the 0.93+ F1 score.
+* **`base_model.py`:** Contains the architecture for the Base VAE (GRU-based Encoder and Decoder).
+* **`config.yaml`:** The central configuration file for all hyperparameters, model dimensions, and LARA specific settings.
+* **`data_utils.py`:** Handles data loading, MinMaxScaler normalization, and sliding window generation.
+* **`lara_wrapper.py`:** Implements the LARA logic (freezing the base VAE and updating the linear adjustment layers).
+* **`ruminate.py`:** Contains the logic for Monte Carlo sampling to estimate the target latent representations.
 
-### 3. Multi-Scale Context Ensemble
-Single window sizes often miss the broader context or over-smooth sharp spikes.
-* **How it works:** The model trains parallel pipelines on different window scales (e.g., `Window Size = 32` and `Window Size = 96`). The anomaly scores are log-scaled (`log1p`), normalized, and then averaged. This captures both short-term glitches and long-term contextual drift.
+## 4. Hyperparameter Configuration (`config.yaml`)
+Before running the models, you can adjust the system settings and hyperparameters in the `config.yaml` file. 
+
+```yaml
+# System Settings
+system:
+  seed: 42
+  device: "cuda" # or "cpu"
+  data_root: "data/SMD"
+
+# Base Model Architecture
+model:
+  input_dim: 38      # 38 features for SMD
+  hidden_dim: 100    # GRU hidden state size
+  latent_dim: 16     # VAE bottleneck size
+  dropout: 0.2
+
+# Training Hyperparameters
+training:
+  batch_size: 256
+  lr_base: 0.0006    # Learning rate for base VAE
+  lr_lara: 0.008     # Learning rate for LARA retraining
+  epochs_base: 40    # Epochs to train the base model
+  epochs_retrain: 15 # Epochs for fast convex LARA retraining
+
+# LARA Specific Settings
+lara:
+  n_restored: 16      # Historical samples to restore
+  mc_samples: 10      # Monte Carlo samples
+  retrain_ratio: 0.01 # Use 1% of target data for rapid adaptation
+
+### 5. Hướng dẫn chạy mô hình từng bước (Step-by-Step Execution Guide)
+
+
+### Bước 1: Cài đặt môi trường
+Đảm bảo bạn đã cài đặt Python 3.8 trở lên. Cài đặt các thư viện cần thiết thông qua terminal hoặc command prompt:
+
+```bash
+pip install torch numpy pandas scikit-learn pyyaml tqdm
+```
+
+### Bước 2: Chuẩn bị dữ liệu
+Đảm bảo tập dữ liệu Server Machine Dataset (SMD) được đặt đúng vị trí trong thư mục dự án như đã định nghĩa trong file `config.yaml` (mặc định là `data/SMD/`). Cấu trúc thư mục yêu cầu như sau:
+* `data/SMD/train/`: Chứa các file `.txt` dữ liệu huấn luyện (dữ liệu bình thường).
+* `data/SMD/test/`: Chứa các file dữ liệu kiểm thử (có chứa các điểm bất thường).
+* `data/SMD/test_label/`: Chứa các file nhãn thực tế (Ground truth binary labels 0/1).
+
+### Bước 3: Chạy mô hình cải tiến (V25)
+Để thực thi toàn bộ luồng pipeline — bao gồm tự động huấn luyện Base Model, áp dụng bộ lọc làm sạch bộ nhớ CMI, thực thi pha retrain của LARA, và tính toán điểm bất thường bằng MAD-FES — bạn chỉ cần chạy script phiên bản 25:
+
+```bash
+python Version25.py
+```
+
+*Lưu ý: Script sẽ hiển thị thanh tiến trình (progress bar) cho từng máy đang được xử lý và in ra điểm F1-score chi tiết của từng máy ngay sau khi hoàn thành.*
 
 ---
 
-## 📂 Repository Structure
+## 6. Kết quả thực nghiệm (Experimental Results)
 
-The codebase is highly modularized for research and production deployment:
+Việc đánh giá phiên bản **V25** trên toàn bộ 28 máy của Server Machine Dataset đã mang lại các chỉ số hiệu suất tổng hợp cực kỳ ấn tượng:
 
-```text
-.
-├── main.py               # Main pipeline: orchestrates loading, training, and evaluation
-├── config.yaml           # Centralized configuration (hyperparameters, LARA configs)
-├── data_utils.py         # DatasetManager: Sliding window generation and MinMaxScaler
-├── base_model.py         # Base VAE architecture (GRU-based Encoder/Decoder)
-├── lara_wrapper.py       # LARA wrapper: Implements Theorem 1 (Linear Mx, Mz layers)
-├── ruminate.py           # Ruminate Block: Monte Carlo sampling and CMI integration
-├── trainer.py            # BaseTrainer (ELBO loss) & LARARetrainer (Convex loss)
-└── detector.py           # AnomalyDetector: Point-adjustment heuristics and F1 evaluation
+* **Điểm F1 Trung bình (Average F1-Score):** **0.9324**
+* **Điểm F1 Trung vị (Median F1-Score):** **0.9740**
+
+Đáng chú ý, mô hình đạt được F1-score gần như hoàn hảo ( > 0.99) trên một số máy cụ thể (ví dụ: `machine-1-1`, `machine-2-8`). Điều này chứng minh được tính bền vững và sự mạnh mẽ của phương pháp chuẩn hóa MAD-FES trong việc kháng lại các nhiễu cục bộ và sự thay đổi đột ngột của dữ liệu.
+
+---
+
+## 7. Kết luận & Hướng phát triển (Conclusion & Future Work)
+
+**Kết luận:** Các cải tiến được đưa vào V25.0 đã chứng minh rõ ràng rằng: việc tiêu chuẩn hóa và làm sạch bộ nhớ khởi tạo (CMI), kết hợp cùng thang đo thống kê kháng đột biến (MAD-FES), giúp nâng tầm đáng kể hiệu suất của kiến trúc LARA cơ bản. Mô hình không chỉ phản ứng nhanh với các thay đổi của dữ liệu mà còn tránh được việc học sai từ các nhiễu ẩn trong tập huấn luyện.
+
+**Hướng phát triển:**
+Các nghiên cứu trong tương lai có thể tập trung vào việc điều chỉnh động kích thước cửa sổ (Dynamic Window Sizing) cho cơ chế Ensemble. Bằng cách tự động nhận diện chu kỳ riêng biệt của từng đặc trưng trên mỗi máy, mô hình có thể giảm thiểu hơn nữa tỷ lệ cảnh báo sai (false positives) trong các luồng dữ liệu có tính biến động và ngẫu nhiên cao.
