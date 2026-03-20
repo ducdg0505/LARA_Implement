@@ -55,10 +55,10 @@ lara:
   mc_samples: 10      # Monte Carlo samples
   retrain_ratio: 0.01 # Use 1% of target data for rapid adaptation
 
-### 5. Hướng dẫn chạy mô hình từng bước (Step-by-Step Execution Guide)
 
+5. Hướng dẫn chạy mô hình từng bước (Step-by-Step Execution Guide)
 
-### Bước 1: Cài đặt môi trường
+Bước 1: Cài đặt môi trường
 Đảm bảo bạn đã cài đặt Python 3.8 trở lên. Cài đặt các thư viện cần thiết thông qua terminal hoặc command prompt:
 
 ```bash
